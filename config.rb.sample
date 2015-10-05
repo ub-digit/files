@@ -1,0 +1,43 @@
+if ENV["RUBY_ENV"] == "test"
+  root = Dir.pwd
+
+  $APP_CONFIG = {
+    "base_url" => "http://test.example.com/files",
+    "redis" => {
+      "host" => "localhost",
+      "db" => 1
+    },
+    "source_paths" => {
+      "STORE" => "#{root}/spec/data/store"
+    },
+    "destination_path" => "#{root}/spec/data/target"
+  }
+elsif ENV["RUBY_ENV"] == "production"
+  $APP_CONFIG = {
+    "base_url" => "http://production.example.com/files",
+    "redis" => {
+      "host" => "localhost",
+      "db" => 2
+    },
+    "source_paths" => {
+      "PROCESSING" => "/data/dfile/processing/",
+      "PACKAGING" => "/data/dfile/packaging/",
+      "STORE" => "/data/dfile/store/"
+    },
+    "destination_path" => "/var/www/files"
+  }
+else
+  $APP_CONFIG = {
+    "base_url" => "http://devel.example.com/files",
+    "redis" => {
+      "host" => "localhost",
+      "db" => 0
+    },
+    "source_paths" => {
+      "PROCESSING" => "/data/dfile/processing/",
+      "PACKAGING" => "/data/dfile/packaging/",
+      "STORE" => "/data/dfile/store/"
+    },
+    "destination_path" => "/var/www/files"
+  }
+end
