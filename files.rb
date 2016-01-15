@@ -7,7 +7,7 @@ require 'fileutils'
 require_relative 'config'
 
 class Files
-  EXPIRE_TIME = 24*24*60 # 24 hours in seconds
+  EXPIRE_TIME = 24*60*60 # 24 hours in seconds
   HASH_LENGTH = 16
 
   def initialize
@@ -50,7 +50,7 @@ class Files
     path = redis_link_path(redis_link_key)
     expire_date = Time.now + EXPIRE_TIME
     link_hash = generate_hash(path)
-    url = $APP_CONFIG["base_url"] + "/" + link_hash
+    url = $APP_CONFIG["base_url"] + "/" + hash_path(link_hash)
 
     if !@redis.get(redis_link_key).empty?
       old_url = @redis.get(redis_link_key)
@@ -69,7 +69,16 @@ class Files
 
   def hash_from_url(url)
     base_url = $APP_CONFIG["base_url"]
-    url[base_url.size+1..-1]
+    # Skip base url size + 1 for / + 6 more for hash_prefix
+    url[base_url.size+7..-1]
+  end
+
+  def hash_path_prefix(link_hash)
+    link_hash[0..1] + "/" + link_hash[2..3]
+  end
+
+  def hash_path(link_hash)
+    hash_path_prefix(link_hash) + "/" + link_hash
   end
   
   def delete_link_if_expired(delete_key)
@@ -80,17 +89,18 @@ class Files
     end
     timestamp = Time.parse(expire_date)
     return if(timestamp > Time.now)
-    FileUtils.rm($APP_CONFIG["destination_path"]+"/#{link_hash}")
+    FileUtils.rm($APP_CONFIG["destination_path"]+"/#{hash_path(link_hash)}")
     @redis.del(delete_key)
   end
 
   def generate_filesystem_symlink(link_hash, path)
-    dest = $APP_CONFIG["destination_path"]+"/"+link_hash
+    dest = $APP_CONFIG["destination_path"]+"/"+hash_path(link_hash)
     local_path = full_local_path(path)
     if !File.exist?(local_path)
       raise StandardError, "Invalid path: #{path}"
     end
     extension = get_link_extension(path)
+    FileUtils.mkdir_p(File.dirname(dest+extension))
     FileUtils.ln_s(local_path, dest+extension)
   end
 

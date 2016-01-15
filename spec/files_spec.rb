@@ -15,7 +15,7 @@ describe "run link management" do
   end
 
   after :each do
-    Dir.glob($APP_CONFIG["destination_path"]+"/*").each do |file| 
+    Dir.glob($APP_CONFIG["destination_path"]+"*/*/*").each do |file| 
       if(Pathname.new(file).symlink?)
         FileUtils.rm(file)
       end
@@ -29,8 +29,10 @@ describe "run link management" do
     expect(@redis.get("File:EXPIRE:STORE:GUB0100100")).to_not be_nil
     url = @redis.get("File:LINK:STORE:GUB0100100")
     link_hash = @files.hash_from_url(url)
-    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+link_hash).symlink?).to be_truthy
-    expect(File.read($APP_CONFIG["destination_path"]+"/"+link_hash+"/pdf/GUB0100100.pdf")).to eq("testdata\n")
+    hash_path_prefix = @files.hash_path_prefix(link_hash)
+    hash_path = hash_path_prefix+"/"+link_hash
+    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+hash_path).symlink?).to be_truthy
+    expect(File.read($APP_CONFIG["destination_path"]+"/"+hash_path+"/pdf/GUB0100100.pdf")).to eq("testdata\n")
   end
 
   it "should append extension to link and url if file" do
@@ -40,8 +42,10 @@ describe "run link management" do
     expect(@redis.get("File:EXPIRE:STORE:GUB0100100/pdf/GUB0100100.pdf")).to_not be_nil
     url = @redis.get("File:LINK:STORE:GUB0100100/pdf/GUB0100100.pdf")
     link_hash = @files.hash_from_url(url)
-    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+link_hash).symlink?).to be_truthy
-    expect(File.read($APP_CONFIG["destination_path"]+"/"+link_hash)).to eq("testdata\n")
+    hash_path_prefix = @files.hash_path_prefix(link_hash)
+    hash_path = hash_path_prefix+"/"+link_hash
+    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+hash_path).symlink?).to be_truthy
+    expect(File.read($APP_CONFIG["destination_path"]+"/"+hash_path)).to eq("testdata\n")
   end
 
   it "should not generate new link when link exists and expire not met" do
@@ -66,10 +70,12 @@ describe "run link management" do
     @files.run
     url = @redis.get("File:LINK:STORE:GUB0100100")
     link_hash = @files.hash_from_url(url)
+    hash_path_prefix = @files.hash_path_prefix(link_hash)
+    hash_path = hash_path_prefix+"/"+link_hash
     @redis.set("File:EXPIRE:STORE:GUB0100100", Time.now - 10)
     @files.run
     expect(@redis.get("File:DELETE_PENDING:#{link_hash}")).to_not be_nil
-    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+link_hash).symlink?).to be_truthy
+    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+hash_path).symlink?).to be_truthy
   end
 
   it "should remove links that were pending and have expired" do
@@ -77,12 +83,14 @@ describe "run link management" do
     @files.run
     url = @redis.get("File:LINK:STORE:GUB0100100")
     link_hash = @files.hash_from_url(url)
+    hash_path_prefix = @files.hash_path_prefix(link_hash)
+    hash_path = hash_path_prefix+"/"+link_hash
     @redis.set("File:EXPIRE:STORE:GUB0100100", Time.now - 10)
     @files.run
     @redis.set("File:DELETE_PENDING:#{link_hash}", Time.now - 10)
     @files.run
     expect(@redis.get("File:DELETE_PENDING:#{link_hash}")).to be_nil
-    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+link_hash).symlink?).to be_falsey
+    expect(Pathname.new($APP_CONFIG["destination_path"]+"/"+hash_path).symlink?).to be_falsey
   end
 end
 
